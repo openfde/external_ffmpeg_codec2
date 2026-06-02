@@ -126,8 +126,9 @@ c2_status_t C2FFMPEGVideoDecodeComponent::openDecoder() {
     if (base::GetBoolProperty("debug.ffmpeg_codec2.fast", false)) {
         mCtx->flags2 |= AV_CODEC_FLAG2_FAST;
     }
-
-    ffmpeg_hwaccel_init(mCtx);
+    if (mUseMesa) {
+        ffmpeg_hwaccel_init(mCtx);
+    }
 
     ALOGD("openDecoder: opening ffmpeg decoder(%s): threads = %d, hw = %s",
           avcodec_get_name(mCtx->codec_id), mCtx->thread_count, mCtx->hw_device_ctx ? "yes" : "no");
