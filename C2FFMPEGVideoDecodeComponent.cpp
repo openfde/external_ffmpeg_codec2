@@ -43,7 +43,11 @@ C2FFMPEGVideoDecodeComponent::C2FFMPEGVideoDecodeComponent(
       mFFMPEGInitialized(false),
       mCodecAlreadyOpened(false),
       mExtradataReady(false),
-      mEOSSignalled(false) {
+      mEOSSignalled(false),
+      mUseMesa(false) {
+    if (!strcmp(base::GetProperty("ro.hardware.egl", "none").c_str(), "mesa")) {
+        mUseMesa = true;
+    }
     ALOGD("C2FFMPEGVideoDecodeComponent: mediaType = %s", componentInfo->mediaType);
 }
 
@@ -464,8 +468,9 @@ c2_status_t C2FFMPEGVideoDecodeComponent::outputFrame(
     }
 
     std::shared_ptr<C2GraphicBlock> block;
+    int aligned_width = (mFrame->width + 511) / 512 * 512;
 
-    err = pool->fetchGraphicBlock(mFrame->width, mFrame->height, HAL_PIXEL_FORMAT_YV12,
+    err = pool->fetchGraphicBlock(mUseMesa ? aligned_width : mFrame->width, mFrame->height, HAL_PIXEL_FORMAT_YV12,
                                   { C2MemoryUsage::CPU_READ, C2MemoryUsage::CPU_WRITE }, &block);
 
     if (err != C2_OK) {

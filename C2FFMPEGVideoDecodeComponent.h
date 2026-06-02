@@ -76,6 +76,7 @@ private:
     bool mExtradataReady;
     bool mEOSSignalled;
     std::deque<PendingWork> mPendingWorkQueue;
+    bool mUseMesa;
 };
 
 } // namespace android
