@@ -16,43 +16,6 @@
 
 <MediaCodecs>
     <Decoders>
-        <!-- audio codecs -->
-        <MediaCodec name="c2.ffmpeg.aac.decoder"    type="audio/mp4a-latm">
-            <Alias name="OMX.ffmpeg.aac.decoder" />
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="8000-192000" />
-        </MediaCodec>
-        <MediaCodec name="c2.ffmpeg.ac3.decoder"    type="audio/ac3" >
-            <Alias name="OMX.ffmpeg.ac3.decoder" />
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="8000-192000" />
-        </MediaCodec>
-        <MediaCodec name="c2.ffmpeg.alac.decoder"   type="audio/alac" >
-            <Alias name="OMX.ffmpeg.alac.decoder" />
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="8000-192000" />
-        </MediaCodec>
-        <MediaCodec name="c2.ffmpeg.flac.decoder"   type="audio/flac" >
-            <Alias name="OMX.ffmpeg.flac.decoder" />
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="8000-192000" />
-        </MediaCodec>
-        <MediaCodec name="c2.ffmpeg.mp2.decoder"    type="audio/mpeg-L2">
-            <Alias name="OMX.ffmpeg.mp2.decoder" />
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="8000-192000" />
-        </MediaCodec>
-        <MediaCodec name="c2.ffmpeg.mp3.decoder"    type="audio/mpeg" >
-            <Alias name="OMX.ffmpeg.mp3.decoder" />
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="8000-192000" />
-        </MediaCodec>
-        <MediaCodec name="c2.ffmpeg.vorbis.decoder" type="audio/vorbis" >
-            <Alias name="OMX.ffmpeg.vorbisac3.decoder" />
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="8000-192000" />
-        </MediaCodec>
-
         <!-- video codecs -->
         <MediaCodec name="c2.ffmpeg.av1.decoder"   type="video/av01">
             <Alias name="OMX.ffmpeg.av1.decoder" />
