@@ -43,6 +43,13 @@ C2FFMPEGVideoDecodeInterface::C2FFMPEGVideoDecodeInterface(
     setDerivedInstance(this);
 
     addParameter(
+        DefineParam(mAppPid, "vendor.app-pid")
+        .withDefault(new C2StreamAppPidInfo(0))
+        .withFields({C2F(mAppPid, value).any()})
+        .withSetter(AppPidSetter)
+        .build());
+
+    addParameter(
             DefineParam(mAttrib, C2_PARAMKEY_COMPONENT_ATTRIBUTES)
             .withConstValue(new C2ComponentAttributesSetting(C2Component::ATTRIB_IS_TEMPORAL))
             .build());
@@ -246,6 +253,14 @@ C2FFMPEGVideoDecodeInterface::C2FFMPEGVideoDecodeInterface(
             .withSetter(Setter<decltype(*mConsumerUsage)>::StrictValueWithNoDeps)
             .build());
 }
+
+C2R C2FFMPEGVideoDecodeInterface::AppPidSetter(bool mayBlock, C2P<C2StreamAppPidInfo> &me) {
+    (void)mayBlock;
+    ALOGW("AppPidSetter me.v.value = %d", me.v.value);
+    me.set().value = me.v.value;
+    return C2R::Ok();
+}
+
 
 C2R C2FFMPEGVideoDecodeInterface::SizeSetter(
         bool /* mayBlock */,

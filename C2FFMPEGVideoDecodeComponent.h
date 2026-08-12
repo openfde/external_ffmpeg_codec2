@@ -62,6 +62,7 @@ private:
     void pushPendingWork(const std::unique_ptr<C2Work>& work);
     void popPendingWork(const std::unique_ptr<C2Work>& work);
     void prunePendingWorksUntil(const std::unique_ptr<C2Work>& work);
+    std::string getAppNameByPid(int32_t pid);
 
 private:
     const C2FFMPEGComponentInfo* mInfo;
@@ -77,6 +78,7 @@ private:
     bool mEOSSignalled;
     std::deque<PendingWork> mPendingWorkQueue;
     bool mUseMesa;
+    std::string mAppName{""};
 };
 
 } // namespace android

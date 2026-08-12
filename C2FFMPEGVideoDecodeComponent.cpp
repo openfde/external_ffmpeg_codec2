@@ -18,6 +18,7 @@
 #include <android-base/properties.h>
 #include <log/log.h>
 #include <algorithm>
+#include <fstream>
 
 #include <SimpleC2Interface.h>
 #include "C2FFMPEGVideoDecodeComponent.h"
@@ -403,8 +404,38 @@ void C2FFMPEGVideoDecodeComponent::prunePendingWorksUntil(const std::unique_ptr<
     }
 }
 
+std::string C2FFMPEGVideoDecodeComponent::getAppNameByPid(int32_t pid) {
+    if (pid <= 0) return "";
+
+    std::string path = "/proc/" + std::to_string(pid) + "/cmdline";
+    std::ifstream cmdlineFile(path);
+    std::string appName;
+
+    if (cmdlineFile.is_open()) {
+        std::getline(cmdlineFile, appName, '\0');
+        cmdlineFile.close();
+    }
+
+    if (appName.empty()) {
+        appName = "unknown_app";
+    }
+
+    return appName;
+}
+
+
 c2_status_t C2FFMPEGVideoDecodeComponent::onInit() {
     ALOGD("onInit");
+
+    int32_t appPid = 0;
+    {
+        appPid = mIntf->getAppPid_l();
+    }
+
+    mAppName = getAppNameByPid(appPid);
+
+    ALOGW("[AppTracker] C2FFMPEGVideoDecodeComponent onInit %p for App: %s (PID: %d) ====",
+          this, mAppName.c_str(), appPid);
     return initDecoder();
 }
 
@@ -490,6 +521,63 @@ c2_status_t C2FFMPEGVideoDecodeComponent::outputFrame(
 
     err = getOutputBuffer(&wView);
     if (err == C2_OK) {
+        if (mAppName == "com.oray.sunlogin") {
+            ALOGD("C2FFMPEGVideoDecodeComponent outputFrame package name detected: %s",
+                  mAppName.c_str());
+
+            uint32_t stride = wView.layout().planes[C2PlanarLayout::PLANE_Y].rowInc;
+            uint32_t width  = mFrame->width;
+            uint32_t height = mFrame->height;
+
+            if (stride > width + 16) {
+                ALOGD("[C2FFMPEGVideoDecodeComponent] %u -> %u", width, stride);
+
+                uint8_t* yPlane = wView.data()[C2PlanarLayout::PLANE_Y];
+                uint8_t* uPlane = wView.data()[C2PlanarLayout::PLANE_U];
+                uint8_t* vPlane = wView.data()[C2PlanarLayout::PLANE_V];
+
+                const uint32_t halfStride = stride / 2;
+                const uint32_t halfWidth  = (width + 1) / 2;
+
+                std::vector<uint8_t> yTemp(width);
+                for (uint32_t y = 0; y < height; ++y) {
+                    uint8_t* line = yPlane + y * stride;
+                    memcpy(yTemp.data(), line, width);
+
+                    for (uint32_t x = 0; x < stride; ++x) {
+                        uint32_t srcX = (x * (uint64_t)width) / stride;
+                        int x0 = srcX;
+                        int x1 = std::min(x0 + 1, (int)width - 1);
+                        uint32_t weight = ((x * (uint64_t)width) % stride) * 256 / stride;
+
+                        line[x] = (uint8_t)(((uint16_t)yTemp[x0] * (256 - weight) +
+                                             (uint16_t)yTemp[x1] * weight) >> 8);
+                    }
+                }
+
+                std::vector<uint8_t> uTemp(halfWidth);
+                std::vector<uint8_t> vTemp(halfWidth);
+                for (uint32_t y = 0; y < height / 2; ++y) {
+                    uint8_t* uLine = uPlane + y * halfStride;
+                    uint8_t* vLine = vPlane + y * halfStride;
+
+                    memcpy(uTemp.data(), uLine, halfWidth);
+                    memcpy(vTemp.data(), vLine, halfWidth);
+
+                    for (uint32_t x = 0; x < halfStride; ++x) {
+                        uint32_t srcX = (x * (uint64_t)halfWidth) / halfStride;
+                        int x0 = srcX;
+                        int x1 = std::min(x0 + 1, (int)halfWidth - 1);
+                        uint32_t weight = ((x * (uint64_t)halfWidth) % halfStride) * 256 / halfStride;
+
+                        uLine[x] = (uint8_t)(((uint16_t)uTemp[x0] * (256 - weight) +
+                                              (uint16_t)uTemp[x1] * weight) >> 8);
+                        vLine[x] = (uint8_t)(((uint16_t)vTemp[x0] * (256 - weight) +
+                                              (uint16_t)vTemp[x1] * weight) >> 8);
+                    }
+                }
+            }
+        }
         std::shared_ptr<C2Buffer> buffer = createGraphicBuffer(std::move(block), C2Rect(mFrame->width, mFrame->height));
 
         buffer->setInfo(mIntf->getPixelFormatInfo());
