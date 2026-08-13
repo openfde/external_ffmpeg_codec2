@@ -20,6 +20,15 @@
 #include <SimpleC2Interface.h>
 #include "C2FFMPEGCommon.h"
 
+#include <C2ParamDef.h>
+
+enum C2CustomParamIndex : uint32_t {
+    kParamIndexAppPid = C2Param::TYPE_INDEX_VENDOR_START + 0x100,
+};
+
+typedef C2GlobalParam<C2Tuning, C2Int32Value, kParamIndexAppPid> C2StreamAppPidInfo;
+
+
 namespace android {
 
 class C2FFMPEGVideoDecodeInterface : public SimpleInterface<void>::BaseParams {
@@ -34,6 +43,9 @@ public:
     const std::shared_ptr<C2StreamPixelFormatInfo::output>&
         getPixelFormatInfo() const { return mPixelFormat; }
     uint32_t getOutputDelay() const { return mActualOutputDelay->value; }
+    int32_t getAppPid_l() const {
+        return mAppPid ? mAppPid->value : 0;
+    }
 
 private:
     static C2R SizeSetter(
@@ -44,6 +56,7 @@ private:
         bool mayBlock,
         C2P<C2StreamProfileLevelInfo::input> &me,
         const C2P<C2StreamPictureSizeInfo::output> &size);
+    static C2R AppPidSetter(bool mayBlock, C2P<C2StreamAppPidInfo> &me);
 
 private:
     std::shared_ptr<C2StreamPictureSizeInfo::output> mSize;
@@ -51,6 +64,7 @@ private:
     std::shared_ptr<C2StreamColorInfo::output> mColorInfo;
     std::shared_ptr<C2StreamPixelFormatInfo::output> mPixelFormat;
     std::shared_ptr<C2StreamUsageTuning::output> mConsumerUsage;
+    std::shared_ptr<C2StreamAppPidInfo> mAppPid;
 };
 
 } // namespace android
