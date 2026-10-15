@@ -33,6 +33,7 @@
 #include "C2FFMPEGAudioDecodeInterface.h"
 #include "C2FFMPEGVideoDecodeComponent.h"
 #include "C2FFMPEGVideoDecodeInterface.h"
+#include "ffmpeg_utils/ffmpeg_hwaccel.h"
 
 namespace android {
 
@@ -74,6 +75,13 @@ static const C2FFMPEGComponentInfo kFFMPEGAudioComponents[] = {
 
 static const size_t kNumAudioComponents =
     (sizeof(kFFMPEGAudioComponents) / sizeof(kFFMPEGAudioComponents[0]));
+
+static bool componentInterfaceAvailable(enum AVCodecID codecId) {
+    if (strcmp(base::GetProperty("ro.hardware.egl", "none").c_str(), "mesa")) {
+        return false;
+    }
+    return ffmpeg_hwaccel_is_available(codecId) != 0;
+}
 
 class StoreImpl : public C2ComponentStore {
 public:
@@ -167,6 +175,11 @@ public:
             }
             if (defaultRankVideo != RANK_DISABLED) {
                 for (int i = 0; i < kNumVideoComponents; i++) {
+                    if (!componentInterfaceAvailable(kFFMPEGVideoComponents[i].codecID)) {
+                        ALOGI("listComponents: skip %s (no HW accel, use aosp's swcodec)",
+                              kFFMPEGVideoComponents[i].name);
+                        continue;
+                    }
                     auto traits = std::make_shared<C2Component::Traits>();
                     traits->name = kFFMPEGVideoComponents[i].name;
                     traits->domain = C2Component::DOMAIN_VIDEO;
