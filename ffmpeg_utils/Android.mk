@@ -36,6 +36,7 @@ LOCAL_SHARED_LIBRARIES += \
     libstagefright_foundation \
     libswresample \
     libswscale \
+    libva \
     libutils
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)

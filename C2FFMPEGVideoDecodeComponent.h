@@ -50,6 +50,7 @@ protected:
 private:
     c2_status_t initDecoder();
     c2_status_t openDecoder();
+    bool av1StreamFitsHw(int32_t width, int32_t height);
     void deInitDecoder();
     c2_status_t processCodecConfig(C2ReadView* inBuffer);
     c2_status_t sendInputBuffer(C2ReadView* inBuffer, int64_t timestamp);
@@ -77,7 +78,6 @@ private:
     bool mExtradataReady;
     bool mEOSSignalled;
     std::deque<PendingWork> mPendingWorkQueue;
-    bool mUseMesa;
     std::string mAppName{""};
 };
 

@@ -44,11 +44,7 @@ C2FFMPEGVideoDecodeComponent::C2FFMPEGVideoDecodeComponent(
       mFFMPEGInitialized(false),
       mCodecAlreadyOpened(false),
       mExtradataReady(false),
-      mEOSSignalled(false),
-      mUseMesa(false) {
-    if (!strcmp(base::GetProperty("ro.hardware.egl", "none").c_str(), "mesa")) {
-        mUseMesa = true;
-    }
+      mEOSSignalled(false) {
     ALOGD("C2FFMPEGVideoDecodeComponent: mediaType = %s", componentInfo->mediaType);
 }
 
@@ -106,6 +102,10 @@ c2_status_t C2FFMPEGVideoDecodeComponent::openDecoder() {
     if (mCtx->codec_id == AV_CODEC_ID_H264 &&
             base::GetBoolProperty("persist.ffmpeg_codec2.v4l2.h264", false)) {
         mCtx->codec = avcodec_find_decoder_by_name("h264_v4l2m2m");
+    } else if (mCtx->codec_id == AV_CODEC_ID_AV1) {
+        mCtx->codec = av1StreamFitsHw(mCtx->width, mCtx->height)
+                ? avcodec_find_decoder(AV_CODEC_ID_AV1)
+                : avcodec_find_decoder_by_name("libdav1d");
     } else {
         mCtx->codec = avcodec_find_decoder(mCtx->codec_id);
     }
@@ -127,9 +127,7 @@ c2_status_t C2FFMPEGVideoDecodeComponent::openDecoder() {
     if (base::GetBoolProperty("debug.ffmpeg_codec2.fast", false)) {
         mCtx->flags2 |= AV_CODEC_FLAG2_FAST;
     }
-    if (mUseMesa) {
-        ffmpeg_hwaccel_init(mCtx);
-    }
+    ffmpeg_hwaccel_init(mCtx);
 
     ALOGD("openDecoder: opening ffmpeg decoder(%s): threads = %d, hw = %s",
           avcodec_get_name(mCtx->codec_id), mCtx->thread_count, mCtx->hw_device_ctx ? "yes" : "no");
@@ -151,6 +149,40 @@ c2_status_t C2FFMPEGVideoDecodeComponent::openDecoder() {
     }
 
     return C2_OK;
+}
+
+bool C2FFMPEGVideoDecodeComponent::av1StreamFitsHw(int32_t width, int32_t height) {
+    struct Av1HwInfo {
+        bool probed;
+        bool available;
+        int32_t maxWidth;
+        int32_t maxHeight;
+    };
+    static Av1HwInfo sInfo = {false, false, 0, 0};
+    if (!sInfo.probed) {
+        sInfo.available = ffmpeg_hwaccel_is_available(AV_CODEC_ID_AV1) != 0;
+        if (sInfo.available) {
+            ffmpeg_hwaccel_limits(AV_CODEC_ID_AV1, &sInfo.maxWidth, &sInfo.maxHeight);
+        }
+        sInfo.probed = true;
+        ALOGI("av1StreamFitsHw: hardware available=%d, limits=%dx%d",
+              sInfo.available, sInfo.maxWidth, sInfo.maxHeight);
+    }
+
+    if (!sInfo.available) {
+        return false;
+    }
+    if (width > 0 && sInfo.maxWidth > 0 && width > sInfo.maxWidth) {
+        ALOGI("av1StreamFitsHw: %dx%d exceeds the hardware max width %d -> software decoding",
+              width, height, sInfo.maxWidth);
+        return false;
+    }
+    if (height > 0 && sInfo.maxHeight > 0 && height > sInfo.maxHeight) {
+        ALOGI("av1StreamFitsHw: %dx%d exceeds the hardware max height %d -> software decoding",
+              width, height, sInfo.maxHeight);
+        return false;
+    }
+    return true;
 }
 
 void C2FFMPEGVideoDecodeComponent::deInitDecoder() {
