@@ -77,6 +77,9 @@ static const size_t kNumAudioComponents =
     (sizeof(kFFMPEGAudioComponents) / sizeof(kFFMPEGAudioComponents[0]));
 
 static bool componentInterfaceAvailable(enum AVCodecID codecId) {
+    if (codecId == AV_CODEC_ID_H263) {
+        return true;
+    }
     if (strcmp(base::GetProperty("ro.hardware.egl", "none").c_str(), "mesa")) {
         return false;
     }
